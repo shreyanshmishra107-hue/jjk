@@ -140,28 +140,47 @@
             return fullUrl.split('?__hdnea__=')[0]; 
         } 
 
-        async function fetchChannelConfig() { 
-            const channelId = getChannelIdFromURL(); 
-            if (!channelId) return null; 
-            try { 
-                const response = await fetch(CONFIG_API_URL, { cache: "no-store" }); 
-                if (!response.ok) throw new Error("HTTP " + response.status); 
-                const channels = await response.json(); 
-                const channel = channels.find(ch => ch.channel_id === channelId); 
-                if (!channel) return null; 
+  async function fetchChannelConfig() {
+    const channelId = getChannelIdFromURL();
+    if (!channelId) return null;
 
-                return { 
-                    streamUrl: getBaseMPDUrl(channel.channel_url), 
-                    keyId: channel.keyId, 
-                    key: channel.key, 
-                    cookieValue: channel.cookie || "", 
-                    channelName: channel.channel_name 
-                }; 
-            } catch (error) { 
-                console.warn("Failed to fetch config from API, using fallback:", error); 
-                return null; 
-            } 
-        } 
+    try {
+        const response = await fetch(CONFIG_API_URL, {
+            cache: "no-store"
+        });
+
+        if (!response.ok) {
+            throw new Error("HTTP " + response.status);
+        }
+
+        const data = await response.json();
+
+        if (!data.channels || !Array.isArray(data.channels)) {
+            throw new Error("Invalid JSON structure");
+        }
+
+        const channel = data.channels.find(
+            ch => String(ch.id) === String(channelId)
+        );
+
+        if (!channel) {
+            console.error("Channel not found:", channelId);
+            return null;
+        }
+
+        return {
+            streamUrl: getBaseMPDUrl(channel.stream_url),
+            keyId: channel.key_id,
+            key: channel.key,
+            cookieValue: channel.cookie || "",
+            channelName: channel.name || ""
+        };
+
+    } catch (error) {
+        console.error("Failed to fetch channel config:", error);
+        return null;
+    }
+} 
 
         async function initPlayer() { 
             const video = document.getElementById("video"); 
